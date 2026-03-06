@@ -1,4 +1,4 @@
- GrowthApp: Real-Time A/B Testing & Activation Funnel
+## GrowthApp: Real-Time A/B Testing & Activation Funnel
 
 
 
