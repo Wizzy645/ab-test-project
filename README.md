@@ -17,10 +17,6 @@ The Business Problem Solved: Improving top-of-funnel conversion rates. By tracki
 <img width="1366" height="646" alt="image" src="https://github.com/user-attachments/assets/520c24bd-9354-4c94-9394-904b9929c2e6" />
 
 
-* **Variation A (Control):** `![Screenshot of Variation A](link-to-image.png)`
-* **Variation B (Test):** `![Screenshot of Variation B](link-to-image.png)`
-* **Admin Results Dashboard:** `![Screenshot of Dashboard](link-to-image.png)`
-
 ## ⚙️ Setup Instructions
 Want to run this experiment locally? Follow these steps:
 
