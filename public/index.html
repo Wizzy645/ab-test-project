@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowthApp - Boldly Go</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Your custom animations */
+        @keyframes fade-in-down {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-down { animation: fade-in-down 0.8s ease-out forwards; }
+        .animate-fade-in-up { animation: fade-in-up 0.8s ease-out forwards; opacity: 0; }
+        .animation-delay-200 { animation-delay: 0.2s; }
+        .animation-delay-400 { animation-delay: 0.4s; }
+        .animation-delay-600 { animation-delay: 0.6s; }
+        .animation-delay-800 { animation-delay: 0.8s; }
+    </style>
+</head>
+<body class="bg-black m-0 overflow-hidden">
+
+    <canvas id="shaderCanvas" class="absolute inset-0 w-full h-full object-contain touch-none" style="background: black;"></canvas>
+
+    <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-white">
+        
+        <div class="mb-8 animate-fade-in-down">
+            <div class="flex items-center gap-2 px-6 py-3 bg-orange-500/10 backdrop-blur-md border border-orange-300/30 rounded-full text-sm">
+                <span class="text-orange-100">Trusted by 10,000+ Explorers</span>
+            </div>
+        </div>
+
+        <div class="text-center space-y-6 max-w-5xl mx-auto px-4">
+            <div class="space-y-2">
+                <h1 id="headline1" class="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-300 via-yellow-400 to-amber-300 bg-clip-text text-transparent animate-fade-in-up animation-delay-200">
+                    Loading...
+                </h1>
+                <h1 id="headline2" class="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent animate-fade-in-up animation-delay-400">
+                    Loading...
+                </h1>
+            </div>
+            
+            <div class="max-w-3xl mx-auto animate-fade-in-up animation-delay-600">
+                <p class="text-lg md:text-xl lg:text-2xl text-orange-100/90 font-light leading-relaxed">
+                    To explore strange new worlds, to seek out new life and new civilizations.
+                </p>
+            </div>
+            
+            <div id="signupContainer" class="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-fade-in-up animation-delay-800">
+                <input type="email" id="email" placeholder="Enter your email" required 
+                       class="px-6 py-4 bg-black/50 border border-orange-300/30 rounded-full text-white placeholder-orange-100/50 focus:outline-none focus:border-orange-500 w-full sm:w-64 backdrop-blur-sm">
+                
+                <button id="primaryBtn" class="px-8 py-4 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-black rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25">
+                    Start Exploring
+                </button>
+            </div>
+            
+            <p id="successMessage" style="display: none;" class="mt-10 text-xl text-green-400 font-semibold animate-fade-in-up">
+                Transmission received. Welcome aboard!
+            </p>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================
+           PART 1: A/B TESTING LOGIC
+           ========================================= */
+        const variations = {
+            'A': {
+                line1: 'Explore Strange',
+                line2: 'New Worlds.',
+                buttonStyle: 'bg-gradient-to-r from-orange-500 to-yellow-500 text-black',
+                buttonText: 'Start Exploring'
+            },
+            'B': {
+                line1: 'Boldly Go Where',
+                line2: 'No Man Has Gone.',
+                buttonStyle: 'bg-gradient-to-r from-red-600 to-orange-600 text-white',
+                buttonText: 'Join The Fleet Now'
+            }
+        };
+
+        const currentVariation = Math.random() < 0.5 ? 'A' : 'B';
+        const config = variations[currentVariation];
+
+        // Apply Variation UI
+        document.getElementById('headline1').innerText = config.line1;
+        document.getElementById('headline2').innerText = config.line2;
+        document.getElementById('primaryBtn').className = `px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl ${config.buttonStyle}`;
+        document.getElementById('primaryBtn').innerText = config.buttonText;
+
+        // Track View
+        fetch('/api/track-view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ variation: currentVariation })
+        });
+
+        // Track Signup (Activation)
+        document.getElementById('primaryBtn').addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            if(!email) return alert("Please enter an email!");
+
+            fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, variation: currentVariation })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('signupContainer').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                }
+            });
+        });
+
+        /* =========================================
+           PART 2: VANILLA WEBGL ENGINE
+           ========================================= */
+        const defaultShaderSource = `#version 300 es
+        precision highp float;
+        out vec4 O;
+        uniform vec2 resolution;
+        uniform float time;
+        #define FC gl_FragCoord.xy
+        #define T time
+        #define R resolution
+        #define MN min(R.x,R.y)
+        float rnd(vec2 p) { p=fract(p*vec2(12.9898,78.233)); p+=dot(p,p+34.56); return fract(p.x*p.y); }
+        float noise(in vec2 p) { vec2 i=floor(p), f=fract(p), u=f*f*(3.-2.*f); return mix(mix(rnd(i),rnd(i+vec2(1,0)),u.x),mix(rnd(i+vec2(0,1)),rnd(i+1.),u.x),u.y); }
+        float fbm(vec2 p) { float t=.0, a=1.; mat2 m=mat2(1.,-.5,.2,1.2); for (int i=0; i<5; i++) { t+=a*noise(p); p*=2.*m; a*=.5; } return t; }
+        float clouds(vec2 p) { float d=1., t=.0; for (float i=.0; i<3.; i++) { float a=d*fbm(i*10.+p.x*.2+.2*(1.+i)*p.y+d+i*i+p); t=mix(t,d,a); d=a; p*=2./(i+1.); } return t; }
+        void main(void) {
+            vec2 uv=(FC-.5*R)/MN,st=uv*vec2(2,1);
+            vec3 col=vec3(0);
+            float bg=clouds(vec2(st.x+T*.5,-st.y));
+            uv*=1.-.3*(sin(T*.2)*.5+.5);
+            for (float i=1.; i<12.; i++) {
+                uv+=.1*cos(i*vec2(.1+.01*i, .8)+i*i+T*.5+.1*uv.x);
+                vec2 p=uv;
+                float d=length(p);
+                col+=.00125/d*(cos(sin(i)*vec3(1,2,3))+1.);
+                float b=noise(i+p+bg*1.731);
+                col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));
+                col=mix(col,vec3(bg*.25,bg*.137,bg*.05),d);
+            }
+            O=vec4(col,1);
+        }`;
+
+        class WebGLRenderer {
+            constructor(canvas, scale) {
+                this.canvas = canvas; this.scale = scale;
+                this.gl = canvas.getContext('webgl2');
+                this.gl.viewport(0, 0, canvas.width * scale, canvas.height * scale);
+                this.shaderSource = defaultShaderSource;
+                this.vertexSrc = `#version 300 es\nprecision highp float;\nin vec4 position;\nvoid main(){gl_Position=position;}`;
+                this.vertices = [-1, 1, -1, -1, 1, 1, 1, -1];
+            }
+            compile(shader, source) {
+                this.gl.shaderSource(shader, source); this.gl.compileShader(shader);
+            }
+            setup() {
+                const gl = this.gl;
+                this.vs = gl.createShader(gl.VERTEX_SHADER); this.fs = gl.createShader(gl.FRAGMENT_SHADER);
+                this.compile(this.vs, this.vertexSrc); this.compile(this.fs, this.shaderSource);
+                this.program = gl.createProgram();
+                gl.attachShader(this.program, this.vs); gl.attachShader(this.program, this.fs);
+                gl.linkProgram(this.program);
+            }
+            init() {
+                const gl = this.gl; const program = this.program;
+                this.buffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
+                const position = gl.getAttribLocation(program, 'position');
+                gl.enableVertexAttribArray(position);
+                gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+                program.resolution = gl.getUniformLocation(program, 'resolution');
+                program.time = gl.getUniformLocation(program, 'time');
+            }
+            render(now = 0) {
+                const gl = this.gl; const program = this.program;
+                gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.useProgram(program); gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+                gl.uniform2f(program.resolution, this.canvas.width, this.canvas.height);
+                gl.uniform1f(program.time, now * 1e-3);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+        }
+
+        // Initialize Background
+        const canvas = document.getElementById('shaderCanvas');
+        const dpr = Math.max(1, 0.5 * window.devicePixelRatio);
+        const renderer = new WebGLRenderer(canvas, dpr);
+        
+        function resize() {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            renderer.gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        
+        window.addEventListener('resize', resize);
+        renderer.setup(); renderer.init(); resize();
+        
+        function loop(now) {
+            renderer.render(now);
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

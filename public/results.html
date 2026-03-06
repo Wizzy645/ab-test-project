@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/B Test Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 40px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #222; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: center; }
+        th { background-color: #007BFF; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        /* Highlight the winning row */
+        .winner { background-color: #d4edda !important; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Experiment Results Dashboard</h1>
+        <p style="text-align: center;">Live data from our Node.js Backend</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Variation</th>
+                    <th>Total Views</th>
+                    <th>Total Signups</th>
+                    <th>Conversion Rate</th>
+                </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+                <tr><td colspan="4">Loading data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Fetch the data from our API
+        fetch('/api/results')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('resultsTableBody');
+                tableBody.innerHTML = ''; // Clear the "Loading..." text
+
+                // Find the highest conversion rate to highlight the winner
+                let highestRate = 0;
+                data.forEach(row => {
+                    const rateNumber = parseFloat(row.conversionRate); // Turn "25.00%" into 25.00
+                    if (rateNumber > highestRate) highestRate = rateNumber;
+                });
+
+                // Loop through our data and create a table row for each variation
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    
+                    // If this row has the highest conversion rate, give it the 'winner' CSS class (green background)
+                    const rateNumber = parseFloat(row.conversionRate);
+                    if (rateNumber === highestRate && rateNumber > 0) {
+                        tr.classList.add('winner');
+                    }
+
+                    // Insert the data into HTML table cells
+                    tr.innerHTML = `
+                        <td>Version <strong>${row.variation}</strong></td>
+                        <td>${row.views}</td>
+                        <td>${row.signups}</td>
+                        <td>${row.conversionRate}</td>
+                    `;
+                    
+                    tableBody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                document.getElementById('resultsTableBody').innerHTML = `<tr><td colspan="4" style="color:red;">Error loading data.</td></tr>`;
+            });
+    </script>
+</body>
+</html>
