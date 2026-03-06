@@ -7,7 +7,7 @@ GrowthApp is a full-stack A/B testing engine designed to optimize user activatio
 
 The Business Problem Solved: Improving top-of-funnel conversion rates. By tracking both "Views" (exposure) and "Signups" (activation), the backend automatically calculates the exact conversion rate percentage for each variation and displays the winning variant on a live administrative dashboard.
 
-Tech Stack
+## Tech Stack
 * **Frontend:** HTML5, Vanilla JavaScript, Tailwind CSS (CDN)
 * **Graphics Engine:** Custom WebGL Fragment Shader (for the interactive background)
 * **Backend:** Node.js, Express.js
@@ -17,7 +17,7 @@ Tech Stack
 <img width="1366" height="646" alt="image" src="https://github.com/user-attachments/assets/520c24bd-9354-4c94-9394-904b9929c2e6" />
 
 
-##Setup Instructions
+## Setup Instructions
 Want to run this experiment locally? Follow these steps:
 
 1. **Clone the repository:**
